@@ -1,0 +1,885 @@
+---
+title: "Exploratory Data Analysis Of Insurance Claims Dataset"
+author: " Sumit Trivedi -- k00302092"
+format: docx
+date: "10/12/2024"
+editor: visual
+output: 
+    bookdown::word_document2:
+    fig_caption: true
+---
+
+```{r setup, include= FALSE}
+knitr::opts_chunk$set(
+    echo = FALSE,
+    message = FALSE,
+    warning = FALSE,
+    out.width = "100%",
+    out.height = "500px",
+    fig.align = "center")
+```
+
+```{r include= FALSE}
+library(tidyverse)
+library(skimr)
+library(recipes)
+library(dplyr)
+library(ggplot2)
+library(knitr)
+library(bookdown)
+library(patchwork)
+```
+
+
+
+```{r load data, include=FALSE}
+claim_fraudflag_data <- read_csv("/Users/sumittrivedi/Downloads/R Project/data.csv")
+```
+
+## Problem Statement
+
+In today's competitive Car Insurance Industry landscape, effectively managing and analyzing insurance claims data is crucial for minimizing fraud, and enhancing customer satisfaction.The Insurance Company Name has commissioned an exploratory data analysis (EDA) of its car insurance claims Dataset to uncover valuable insights and identify potential areas for improvement.
+
+This Report aims to provide comprehensive insights into the company’s car insurance claims data by conducting a thorough exploratory data analysis. By leveraging feature engineering techniques, we will enhance the dataset to uncover hidden patterns, trends, and anomalies.
+
+## Solution Summary
+
+The key outcomes and solutions derived from this car insurance claims Dataset analysis are summarized as follows:
+
+1.  **Data Quality Improvement**: Conducted a thorough evaluation of the dataset to identify and address missing, inconsistent, or erroneous data. Enhancement: Cleaned the data to improve its accuracy and reliability, ensuring it is suitable for in-depth analysis
+
+2.  **Descriptive Analysis**: Provided a detailed summary of the dataset, including mean, median, mode, standard deviation, and distribution of key variables.
+
+3.  **Visualization**: Created visual representations (e.g., histograms, box plots, scatter plots) to understand the data distribution and relationships better.
+
+4.  **Fraud Detection Insight**: Identified key indicators and patterns associated with potentially fraudulent claims.
+
+5.  Created new, meaningful **features** that enhance the dataset’s richness and improve the predictive power of future models.
+
+6.  **Conclusions** highlighting the insights you have gained
+
+```{r include = FALSE}
+head(claim_fraudflag_data, 5) ## looking at the first 5 columns in our datset
+```
+
+```{r include = FALSE}
+glimpse(claim_fraudflag_data) ##Quick overview of the dataset
+```
+
+```{r include = FALSE}
+view(claim_fraudflag_data) ##Dataset in a whole.
+```
+
+## Descriptive Statistics:-
+
+```{r include =  FALSE}
+summary(claim_fraudflag_data) 
+
+## summary statistics of each column with frequency for                                    categorical columns & count of true and false for Logical                                 columns
+```
+
+![Summary statistics - overview of our dataset](R%20Project/00_data/summary%20statistics.png)
+
+The dataset consists of 1,000 observations and includes the following variables: driver, age, address, passenger1, passenger2, repaircost, and fraudFlag. Below is a detailed summary of each variable:
+
+1.  **Driver**:
+
+-   **Length**: 1,000
+-   **Class**: Character
+-   **Description**: This variable represents the name of the driver involved in the claim.
+
+2.  **Age**:
+
+-   **Minimum**: 20.00
+-   **1st Quartile**: 28.00
+-   **Median**: 39.00
+-   **Mean**: 41.89
+-   **3rd Quartile**: 53.00
+-   **Maximum**: 85.00
+-   **Description**: The age of the drivers ranges from 20 to 85 years, with a median age of 39 and a mean age of 41.89.
+
+3.  **Address**:
+
+-   **Length**: 1,000
+-   **Class**: Character
+-   **Description**: This variable contains the addresses of the drivers.
+
+4.  **Passenger1**:
+
+-   **Length**: 1,000
+-   **Class**: Character
+-   **Description**: This variable represents the name of the first passenger in the vehicle, if present.
+
+5.  **Passenger2**:
+
+-   **Length**: 1,000
+-   **Class**: Character
+-   **Description**: This variable represents the name of the second passenger in the vehicle, if present.
+
+6.  **Repair Cost**:
+
+-   **Length**: 1,000
+-   **Class**: Character
+-   **Description**: This variable indicates the estimated cost of repairs for the vehicle, with various formats that have been standardized during the data cleaning process.
+
+7.  **Fraud Flag**:
+
+-   **Mode**: Logical
+-   **False**: 900
+-   **True**: 100
+-   **Description**: This binary variable indicates whether a claim is suspected of being fraudulent (TRUE) or not (FALSE). Out of 1,000 claims, 100 are flagged as fraudulent.
+
+```{r include = FALSE}
+claim_fraudflag_data <- claim_fraudflag_data %>%    
+    mutate_if(is.character, as.factor) 
+
+##Converting our character column in  our dataset as Factor columns make the categorical data easier to  sumarize and visualise.
+
+tail(claim_fraudflag_data,5)    
+
+#validating by viewing the bottom 5 rows.
+```
+
+```{r include = FALSE}
+skim(claim_fraudflag_data) 
+
+## provides the summary statistics of all the columns in our                             dataset with the missing count , unique counts as well as the visual apeals numerical columns
+```
+
+With **skim()** we can find a more detailed statistical analysis of each column with the count of missing data as shown in @fig-Skim-functions-stats which is very useful moving further.
+
+![Skim() function Stats](R%20Project/00_data/null%20+summary%20stats.png){#fig-Skim-functions-stats}
+
+## Data Cleaning:
+
+Data Cleaning in R involves the process of identifying and correcting errors, inconsistencies and missing values in the given dataset to improve its quality and accuracy.
+
+Data cleaning for the claim_fraudflag_data dataset included several steps to ensure the data is accurate, consistent, and ready for analysis. Specific details of what was done during the data cleaning phase are outlined below:
+
+1.**Repaircost column Data Cleaning**
+
+**str_replace_all()**: This function replaces some characters and patterns in the repaircost column with a standard value.
+
+-   Replaced the characters \[k\~\] with 000, converting shorthand representations of thousands, such as "approx 2k", to their full numeric form, such as "2000".
+
+-   Replaced the characters \[!,\*\] with 0 to account for anomalies and mistakes within the data.
+
+-   Replaced the character \[\$\] with 5, which was a manual correction in the dataset.
+
+**str_trim()**: After the replacement, str_trim() was applied to **remove leading or trailing spaces** created by these replacements.
+
+This step ensured the values in the repaircost column were clean and consistent.
+
+```{r include = FALSE}
+claim_fraudflag_data %>% 
+    distinct(repaircost)    
+
+##Distinct values of repair cost in our data.Looking at this values it can be said that cleaning is required
+```
+
+```{r include = FALSE}
+#-------cleaning repair cost cost--------------------
+
+##taking one step at a time STEP 1
+
+claim_fraudflag_data_cleaning <-
+    claim_fraudflag_data %>%
+    mutate(repaircost = repaircost %>% str_replace_all("[k~]","000")  %>%
+    str_trim())                 
+                           
+###here we are replacing all the string values [k & ~] in our repair cost column with 000 indicating they are thousands and then we are trimming all the left and right extra spaces which maybe created after replaving strings
+
+claim_fraudflag_data_cleaning %>% 
+    distinct(repaircost)  
+
+##validating
+                                    
+## we changed the made a new variable claim_fraudflag_data_cleaning with this as making changes in the original dataset is never a good practice
+```
+
+```{r include = FALSE}
+#-------cleaning repair cost cost--------------------
+##STEP 2
+
+claim_fraudflag_data_cleaning <-
+    claim_fraudflag_data_cleaning %>%
+    mutate(repaircost = repaircost %>% str_replace_all("[!*]","0")  %>% str_trim())
+
+ ##here we are replacing all the string values OF [!,*] in our  repair cost column with 0  indicating  they are ERRORS  and then we are trimming all the  left and right extra spaces which maybe created aS A result of  replaCing strings
+                        
+claim_fraudflag_data_cleaning %>% 
+    distinct(repaircost)            
+
+##Validating is a imp step just to crosscheck whether our code is giving the xpected resulset or not
+```
+
+```{r include = FALSE}
+#-------cleaning repair cost cost--------------------
+## STEP 3
+
+claim_fraudflag_data_cleaning <-
+    claim_fraudflag_data_cleaning %>%
+    mutate(repaircost = repaircost %>% str_replace_all("[$]","5") %>% str_trim())
+
+##here we are replacing all the string values OF [$] in our  repair cost column with 5 indicating  they was manual error  and then we are  trimming all the  left and right extra spaces which maybe created aS A result of replaCing trings
+
+
+claim_fraudflag_data_cleaning %>% 
+    distinct(repaircost)
+```
+
+**as.numeric()** : Converting the column values to numerical values to understand the data in a better way.
+
+```{r include = FALSE}
+claim_fraudflag_data_cleaning <- claim_fraudflag_data_cleaning %>%
+    mutate(
+        repaircost = case_when(
+            str_detect(repaircost, "approx") ~ str_replace(repaircost, "approx ", ""),
+            str_detect(repaircost, "above") ~ "3500", # Choose an appropriate value for "above 3000"
+            TRUE ~ repaircost
+        ),
+        repaircost = as.numeric(repaircost)
+    )
+
+#Converting the repaircost column to numerical for better clearity of code. 
+
+claim_fraudflag_data_cleaning %>% 
+    distinct(repaircost) %>% 
+    arrange(desc(repaircost))
+
+```
+
+@fig-Distinct-Repaircost-values shows the distinct values before cleaning and can clearly be observed that there are inconsistencies and then the @fig-Distinct-Cleaned-Repaircost-Values values after cleaning which are more readable and easy to use.
+
+![Distinct values in repair cost column before Cleaning](R%20Project/00_data/repaircost.png){#fig-Distinct-Repaircost-values width="458"}
+
+![Distinct values in repair cost column after cleaning.](R%20Project/00_data/cleaned%20repaircost.png){#fig-Distinct-Cleaned-Repaircost-Values}
+
+2.  **Passenger column Data Cleaning**:
+
+**mutate()** and **case_when()**: To manage missing data and create meaningful columns. passenger 1 and passenger 2 columns were converted to binary. These columns indicate the presence of passengers based on whether the respective values (passenger1, passenger2) are NA. This was an important step to handle missing values in a structured way. 1 indicates the passenger present on the other hand 0 indicate no passenger.
+
+```{r include = FALSE}
+claim_fraudflag_data_cleaning <- 
+    claim_fraudflag_data_cleaning %>% 
+    mutate(passenger1 = case_when(is.na(passenger1) ~ "0", TRUE ~ "1"))
+
+
+
+claim_fraudflag_data_cleaning <- 
+    claim_fraudflag_data_cleaning %>% 
+    mutate(passenger2 = case_when(is.na(passenger2) ~ "0", TRUE ~ "1"))
+
+
+#handling missig values in passenger column
+
+
+head(claim_fraudflag_data_cleaning, 20)  #validating
+
+
+head(claim_fraudflag_data_cleaning, 10) %>% select(passenger1, passenger2)
+```
+
+The Below Figure @fig-passenger-before-cleaning shows missing values in both passenger columns whereas @fig-passenger-after-Cleaning shows the passenger columns after cleaning which makes them ready for analysis.
+
+![Values in passenger Column before Cleaning](R%20Project/00_data/passenger%20column%20nbefore%20Cleaning.png){#fig-passenger-before-cleaning width="509"}
+
+![passenger column after Cleaning](R%20Project/00_data/passenger%20column%20after%20Cleaning.png){#fig-passenger-after-Cleaning width="465"}
+
+```{r include = FALSE}
+claim_fraudflag_data_cleaning <-
+    claim_fraudflag_data_cleaning %>% 
+    mutate(passenger1 = as.numeric(passenger1),
+           passenger2= as.numeric(passenger2)) %>% 
+    mutate(total_passengers = passenger1+passenger2)
+
+## converting the the both the newly created column to numeric and genrating a new column with the  name "total_passengers" which will represent he total passengers present in the car
+
+head(claim_fraudflag_data_cleaning, 20)
+```
+
+3.**Address column Data Cleaning**
+
+**str_replace_all()**: On the address column, multiple patterns that should be replaced by standardized counterparts, such as special character regex \[R/\], \[!\]\[!\], \[K%\], etc., standardized as RR, LIF, VER, etc. It has been an important step as it had to deal with addresses having irregular characters or formatting on many occasions.
+
+Several steps of str_replace_all() were run consecutively to deal with a number of different potential patterns and anomalies to regularize the address values for consistency and accuracy in the dataset.
+
+```{r include = FALSE}
+
+
+claim_fraudflag_data_cleaning %>% 
+    distinct(address) %>% 
+    arrange((address)) 
+
+##need to do some here string manipulation as well
+
+
+claim_fraudflag_data_cleaning1 <-
+    claim_fraudflag_data_cleaning %>%
+    mutate(address = address %>% str_replace_all("[R][/]","RR")  %>%
+           str_replace_all("[L][%][F]","LIF") %>%
+           str_replace_all("[*][\\(][&]","VER") %>%
+           str_replace_all("[K][%][A]","KWA") %>%
+           str_replace_all("[\\^][\\%]","TE") %>%
+           str_replace_all("[I][$]","IE") %>%
+           str_replace_all("[!][!][!]","NEY") %>%
+           str_replace_all("[B][&][:]","BOY") %>%
+           str_replace_all("[\\^][\\)]","AM") %>%
+           str_replace_all("[L][#][D]","L0D") %>%
+           str_replace_all("[C][#]","CK") %>%
+           str_replace_all("[L][%][N]","LAN") %>%
+           str_replace_all("[&][*]","KW") %>%
+           str_replace_all('[%]["][?]',"FEE") %>%
+           str_replace_all("[N][*][O]","NNO") %>%
+           str_replace_all("[R][&]","RR") %>%
+           str_replace_all("[D][/]","DD") %>%
+           str_replace_all("[D][/]","DD") %>%
+           str_replace_all("[D][!][£]","DDE") %>%
+           str_replace_all("[\\{][~]","HA") %>%
+           str_replace_all("[C][+][_]","CAM") %>%
+           str_replace_all("[N][$]","NE") %>%
+           str_replace_all("[!][!]","ER") %>%
+           str_replace_all("[%][$]","OV") %>%
+           str_replace_all("[L][\\:][\\:]","LAN") %>%
+           str_replace_all("[C][#]","CK") %>%
+           str_replace_all("[O][$]","OR") %>%
+           str_replace_all("[S][+][_]","SEV") %>%
+           str_replace_all("[R][%]","RR") %>%
+           str_replace_all("[=][$]","IF") %>%
+           str_replace_all("[$][(]","OW") %>%
+           str_replace_all("[\\!][\\�][R]","DER") %>%
+           str_replace_all('["][!][Y]',"NEY") %>%
+           str_trim())
+
+
+view(claim_fraudflag_data_cleaning1)
+
+claim_fraudflag_data_cleaning1 %>% 
+    distinct(address) %>% 
+    arrange((address))
+
+```
+
+4.**Driver column Data Cleaning**
+
+Similary on driver column some patterns were recognized that needed to be cleaned. Used str_replace_all function to do the cleaning for driver names.
+
+```{r include = FALSE}
+claim_fraudflag_data_cleaning1 <-
+    claim_fraudflag_data_cleaning1 %>%
+    mutate(driver = driver %>% str_replace_all("[M][\\%]","MO")  %>%
+           str_replace_all("[D][<]","DO") %>%
+           str_replace_all("[I][\\?]","IG") %>%
+           str_replace_all("[E][!]","EE") %>%
+           str_trim())
+
+claim_fraudflag_data_cleaning1 %>% 
+    distinct(driver) %>% 
+    arrange((driver))
+```
+
+**Key Functions Used**:
+
+**str_replace_all()**: This was a core function used for cleaning, replacing multiple patterns or characters within string columns for standardization of data and dealing with inconsistencies.
+
+**mutate()**: Used mainly for creating new variables or even changing the values of old ones. It was crucial to be used for creating binary flags indicating passenger presence.
+
+**case_when()**: A conditional function where values are assigned depending on logical conditions; this is utilized to create flags based on passenger presence. **str_trim()**: This function was applied after string replacements to remove unwanted spaces and ensure that the repaircost column was free from extraneous whitespace.
+
+**as_numeric()** : A column was converted to numerical datatype for better understanding our dataset.
+
+Cleaning the data was a crucial step in transforming raw data into a structured and analyzable form. This was done to standardize the dataset, handle missing values, and correct errors within the data. This means the dataset is now ready for detailed analysis and modeling with consistent and accurate values in the key columns.
+
+## Engineered Features:
+
+**total_passengers**: Both the pre-existing passenger1 and passenger2 column indicating the presence of passengers with 1's and 0's have been converted to numerical type and after the conversions a new column was generated as a part of feature engineering to make our analysis more insightful with the name total_passengers by doing arithimatic sum of passenger1 and passenger2 columns indication the total number of passengers presents.
+
+```{r include = FALSE}
+claim_fraudflag_data_cleaning <-
+    claim_fraudflag_data_cleaning %>% 
+    mutate(passenger1 = as.numeric(passenger1),
+           passenger2= as.numeric(passenger2)) %>% 
+    mutate(total_passengers = passenger1+passenger2)
+
+## converting the the both the newly created column to numeric and genrating a new column with the  name "total_passengers" which will represent he total passengers present in the car
+
+head(claim_fraudflag_data_cleaning, 20)
+
+
+```
+
+```{r include = FALSE}
+claim_fraudflag_data_cleaned <- claim_fraudflag_data_cleaning1
+
+view(claim_fraudflag_data_cleaned)
+
+## "claim_fraudflag_data_cleaned" this is our finalised cleaned dataset we will be working on from now on.
+```
+
+```{r include = FALSE}
+claim_fraudflag_data_cleaned %>%
+    filter(fraudFlag == TRUE) %>% 
+    count()
+```
+
+```{r include = FALSE}
+claim_fraudflag_data_cleaned %>%
+    filter(fraudFlag == FALSE) %>% 
+    count()
+```
+
+```{r include = FALSE}
+claim_fraudflag_data_cleaned %>%
+    filter(fraudFlag == TRUE & total_passengers == 0) %>% 
+    count()
+```
+
+```{r include = FALSE}
+claim_fraudflag_data_cleaned %>%
+    filter(fraudFlag == TRUE & total_passengers == 1) %>% 
+    count()
+```
+
+```{r include = FALSE}
+claim_fraudflag_data_cleaned %>%
+    filter(fraudFlag == FALSE & total_passengers == 2) %>% 
+    count()
+```
+
+```{r include = FALSE}
+claim_fraudflag_data_cleaned %>%
+    filter(total_passengers == 2) %>% 
+    count()
+
+
+# WE CAN SAY THERE ARE 1000 CLAIMS IN which 100 claims are flaged as fraud in which there are 67 applications which has two passengers and 26 applications that has 1 paasenger and 7 which had 0 passengers
+```
+
+## Exploratory Visualisations
+
+```{r FraudFlag Distribution, echo=FALSE , warning= FALSE, fig.cap= "Frequency of Fraudulent & Unfradulent Data"}
+
+
+claim_fraudflag_data_cleaned %>% 
+    ggplot(aes(x = fraudFlag, fill =fraudFlag )) +
+    geom_bar() + geom_text(stat = 'count', aes(label = ..count..)) +
+    scale_fill_manual(values = c("TRUE" = "red", "FALSE" = "skyblue")) +
+    labs(title = "FraudFlag Distribution", x = "Fraudflag", y = "Frequency",
+         subtitle = "Frequency of Fraudulent and unfradulent data") + theme_bw()
+
+```
+
+It can be observed from the above bar chart of **FraudFlag Distribution** that out of 1000 rows of claims data in our dataset their are a total of **100 Claims which were flagged as frauds**. The red color bar represents the fraudulent data and its count.
+
+```{r}
+claim_fraudflag_data_cleaned %>% 
+    ggplot(aes(x = total_passengers)) +
+    geom_bar(alpha = 1.5, fill = "orange", color = "white") +
+    geom_text(stat = 'count', aes(label = ..count..)) +
+    labs(title = "Passenger Distribution", x = "totalpassengers", y = "Frequency",
+         subtitle = "total number of passengers present and their frequency" ) +
+    scale_y_continuous(labels = scales::comma)
+```
+
+From the two Visualization of *Passenger distribution and FraudFlag by passenger distribution* we can see that In the dataset given there are
+
+*648 claims which had no passengers* sitting with the driver out of which **7 were flagged as fraud** ,
+
+*242 claim applications said to have 1 passenger* with the driver from which **26 were flagged as fraud** ,
+
+*11% i.e. 110 of the claim applications had 2 passengers* with the driver and **67 were flagged as Fraud**.
+
+can be interpreted from above & below bar graphs.
+
+```{r}
+claim_fraudflag_data_cleaned %>% 
+    ggplot(aes(x = total_passengers, fill = fraudFlag)) +
+    geom_bar(alpha = 1, color = "white") +
+     geom_text(stat = 'count', aes(label = ..count..), position = position_dodge(width = 1), vjust = -0.5) +
+    scale_fill_manual(values = c("seagreen", "red")) +
+    labs(title = "Fraud flag BY Total passengers Distribution", x = "totalpassengers", y = "Frequency",
+         subtitle = "Proportion of fraud flag by total passangers") + theme_bw() +
+    scale_y_continuous(labels = scales::comma)
+
+```
+
+```{r}
+claim_fraudflag_data_cleaned %>% 
+    ggplot(aes(x = age, fill = fraudFlag )) +
+    geom_histogram(binwidth = 5, color = "white") + theme_bw() + 
+    scale_fill_manual(values = c("darkgrey", "red")) +
+    labs(title = "Age Distribution", x = "Age", y = "Frequency", 
+         subtitle = "Age distribution in our Dataset with Fraudflag") 
+
+```
+
+The **age distribution is approximately right skewed** with more individuals in age groups 22-40.
+
+Across all age groups the red bars(frauds) are less as compared to the grey bars.
+
+It can also be observed that **younger age groups show a higher count of frauds**(red bars).
+
+Fraud cases seems to diminish as age increases particularly after 55 where fraud count dissapears.
+
+```{r}
+ggplot(claim_fraudflag_data_cleaned, aes(x = age, fill = fraudFlag)) +
+  geom_density(alpha = 0.5) +
+  labs(title = "Density Plot of Age by Fraud Flag", x = "Age", y = "Density")
+
+```
+
+The Above shown density plot also represents that as the **Age increases the fraud cases decreases and diminishes** at around a certain age.Fraud cases are almost negligible for individuals over 60.Younger individuals are more susceptible to fraud, as suggested by the higher density of fraud cases in these age groups.
+
+```{r}
+claim_fraudflag_data_cleaned %>% 
+    ggplot(aes(x = repaircost, fill = fraudFlag)) +
+    geom_bar(alpha = 1.5) + scale_fill_manual(values = c("steelblue", "red")) + 
+    geom_text(stat = 'count', aes(label = ..count..), position = position_dodge(width = 1), vjust = -0.5) +
+    labs(title = "Repaircost Distribution", x = "Repaircost", y = "Frequency", 
+         subtitle = "Repaircost asked by Driver for claim and their fraud status" ) +
+    scale_y_continuous(labels = scales::comma) +
+    scale_x_continuous(labels = scales::comma, breaks = c(500, 1000, 1500, 2000, 2500, 3000, 3500))
+```
+
+The highest number of claims fall in the range of 1000 repaircost, with a total of 330 claims. This is followed by 500 and 2000 with a total of 245 and 214 claims, respectively. This would mean that repaircost of 1000 might be a typical claim for repairs.
+
+We can also observe that there is no data present for claims for repaircost of 1500 and 2000. which is a very unusual behaviour
+
+Taking about fraudulent and non-fraudulent claims as the **repair cost increases the fraudulent cases decreases and there are no frauds recorded for repaircost above 2000 i.r for 3000 and 3500 range repaircost.**
+
+We can conclude that most of the **fraudsters are asking for low repaircost** which is a interesting and more suitable matrix.
+
+```{r}
+claim_fraudflag_data_cleaned %>% 
+    ggplot(aes(x = fraudFlag, y = repaircost)) +
+    geom_boxplot(alpha = 1, fill = "brown") +
+    labs(title = "Compairision Of Repaircost by Fraudflag", x = "frauudflag", y = "repaircost",
+         subtitle = "Analysis of repaircost for Fraudulent and Non Fradulent Claims Using BoxPlot for outliers.") + theme_bw() +               scale_y_continuous(labels = scales::comma, breaks = c(500, 1000, 1500, 2000, 2500, 3000, 3500))
+
+```
+
+The Repaircosts are higher on average for cases flagged as false(non-fraudulent).
+
+Their is a noticeable **outlier in the fraudulent cases(True)** indicating one or two fraudulent cases have incurred for much higher repaircost.
+
+The median for non-Fraudlent Cases(false) is around 1000 which is highers then that of fraudulent cases(flagged as true).
+
+```{r}
+claim_fraudflag_data_cleaned %>% 
+    ggplot(aes(x = age, y = repaircost, color = fraudFlag)) +
+    geom_point(alpha = 1 ) +
+    scale_color_manual(values = c("purple", "red")) +
+    scale_size_manual(values = c("3", "10")) +
+    labs(title = "Age vs. Repair Costs: Analyzing Fraudulent and Non-Fraudulent Claims", x = "age", y = "repaircost",
+         subtitle = "Exploration of repair cost patterns by age and fraud status in insurance claims") + theme_bw() +
+    scale_y_continuous(labels = scales::comma, breaks = c(500, 1000, 1500, 2000, 2500, 3000, 3500))
+```
+
+From the above **Age vs Repaircost** scatter plot it can be concluded that there is no clear trend or correlation between repaircost and age. We can only observe that there are no fraudulent claims in repair cost greater than 2000 as there are no red dots presents above this point and can also be concluded that most of the fraudulent claims are asking for small repaircost amount and also after the age of 55 there is no fraudulent cases found.
+
+```{r INCLUDE = FALSE}
+address_fraud_freq <- claim_fraudflag_data_cleaned %>%
+  count(address, fraudFlag) %>%
+  filter(fraudFlag == TRUE) %>% 
+  arrange(desc(n))
+```
+
+```{r}
+ggplot(address_fraud_freq %>% 
+        head(12), aes(x =address, y = n, fill = address)) +
+    geom_bar(alpha = 1.5, stat = "identity", width = 0.5) +
+    labs(title = "Top Address for True Fraudflag", x = "Address", y = "Frequency" ) +
+    theme(axis.text.x = element_text(angle = 90)) 
+
+```
+
+The Above graphs shows us the top 12 address column in our dataset which are flagged as true with how many times they were flagged as true(fraudulent) in our dataset.
+
+So we can see that "**2 SEVERN TERRACE"** has the highest frequency indicating that this address was repeatedly flagged as fraud for 3 times. and the rest addresses such as "**1 Shannon Terrace" , "11 Severen Lawns"** were flagged as true two times as indicated by our dataset.
+
+This Suggest there is a Potential repeat Frauds at the same address but no extraordinary concentration at any one location
+
+```{r INCLUDE = FALSE}
+address_fraud_freq_all <- claim_fraudflag_data_cleaned %>%
+  count(address) %>%
+  arrange(desc(n))
+
+
+```
+
+```{r}
+ggplot(address_fraud_freq_all %>% 
+        head(15), aes(x = address, y = n, fill = address)) +
+    geom_bar(alpha = 1.5, stat = "identity", width = 0.5) +
+    labs(title = "Top address with Count", x = "Address", y = "Frequency") +
+    theme(axis.text.x = element_text(angle = 90)) 
+```
+
+We can say that there are 10 address in our dataset which are repeated 4 times and compairing the above two bar charts 1 of which has been flagged as True for fraud "**2 SEVERN TERRACE"** 3 times. Similary with the once repeated 3 times in our dataset 1 such has been flagged as true 2 times "**12 Thames Terrace".** *This was one such pattern that could be seen. there can be many such hiddden patterns in address column.*
+
+```{r INCLUDE = FALSE}
+driver_name_freq <- claim_fraudflag_data_cleaned %>%
+  count(driver) %>%
+  arrange(desc(n))
+```
+
+```{r}
+ggplot(driver_name_freq %>% 
+        head(12), aes(x =reorder(driver, n), y = n, fill = driver)) +
+    geom_bar(alpha = 1.5, stat = "identity", width = 0.5) +
+    labs(title = "Top drivername with Count", x = "drivername", y = "Frequency" ) +
+    theme(axis.text.x = element_text(angle = 90))
+
+```
+
+From the above bar graph we can observe that there are repetition in driver names as well with the **highest frequency of 6 by the name** **JOHN SHEEHAN,** followed by **Thomas Oconnnell & Liam Cahhill** with a **frequency of 5.** and many more indicating the repetitiveness of names in our dataset.
+
+```{r include = FALSE}
+driver_name_freqtrue <- claim_fraudflag_data_cleaned %>%
+  count(driver, fraudFlag) %>% 
+  filter(fraudFlag == TRUE) %>% 
+  arrange(desc(n))
+
+```
+
+```{r}
+
+ggplot(driver_name_freqtrue %>% 
+        head(15), aes(x =driver, y = n, fill = driver)) +
+    geom_bar(alpha = 1.5, stat = "identity", width = 0.5) +
+    labs(x = "drivername", y = "Frequency", title = "Drivename with Count for fraud cases") +
+    theme(axis.text.x = element_text(angle = 90))
+```
+
+This chart identifies drivers associated with fraudulent claims. Each bar represents a driver name, and the bar height indicates the frequency of fraud cases associated with that driver name. Indicating **Liam Cahill** and **Liam Phelena** are the names of driver that have been repeated and been **flagged as fraud the highest times that is 4 times**. Similarly
+
+## Going Deep in the Analysis
+
+```{r INCLUDE = FALSE}
+
+claim_fraudflag_data_cleanedpas2 <- 
+    claim_fraudflag_data_cleaned %>% 
+    filter(total_passengers == 2 & fraudFlag == TRUE)
+```
+
+```{r}
+PLOT1 <- claim_fraudflag_data_cleanedpas2 %>% 
+    ggplot(aes(x = repaircost)) +
+    geom_bar(alpha = 1.5 , fill = "tomato") +
+    geom_text(stat = 'count', aes(label = ..count..), position = position_dodge(width = 1), vjust = -0.5) +
+    labs(title = "Repaircost Distribution ", x = "Repaircost", y = "Frequency",
+         subtitle = "total passengers 2 &  fraud status is true") +
+    scale_x_continuous(labels = scales::comma, breaks = c(500, 1000, 1500, 2000, 2500, 3000, 3500))
+
+PLOT1
+
+```
+
+After filtering the data for true as fraud flag and total passengers == 2 we get the graph that shows the distribution of repair costs for claims involving two passengers where the fraud status is true.
+
+The majority of fraudulent claims with two passengers have a repair cost of 500, with a frequency of 39. The second most common repair cost is 1000, with a frequency of 20.The least frequent repair cost is 2000, with a frequency of 8.
+
+Claims with a repair cost of 500 dominate the distribution. This suggests that **fraudulent claims are more common at lower repair costs indicating a potential common threshold for fraudulent claims**.
+
+There is a significant drop in the frequency of fraudulent claims as the repair cost increases from 500 to 1000 and further to 2000.
+
+```{r}
+claim_fraudflag_data_cleanedpas2false <- 
+    claim_fraudflag_data_cleaned %>% 
+    filter(total_passengers == 2 & fraudFlag == FALSE)
+
+
+PLOT2 <- claim_fraudflag_data_cleanedpas2false %>% 
+    ggplot(aes(x = repaircost)) +
+    geom_bar(alpha = 1.5 , fill = "tan") +
+    geom_text(stat = 'count', aes(label = ..count..), position = position_dodge(width = 1), vjust = -0.5) +
+    labs(title = "Repaircost Distribution ", x = "Repaircost", y = "Frequency",
+         subtitle = "total passengers 2 & fraud status is FALSE") +       
+    scale_x_continuous(labels = scales::comma, breaks = c(500, 1000, 1500, 2000, 2500, 3000, 3500))
+
+
+
+COMBINED_PLOT <- PLOT1  + PLOT2
+```
+
+```{r}
+COMBINED_PLOT
+```
+
+As we compare for non-fraudulent claims with the same amount of passenger as 2 but fraud flag = false we can observe that the highest frequency of claims with a fraud status of false is for a repair cost of 1000, with 17 claims.The next most frequent repair costs are 500 (10 claims), 2000 (9 claims), and 3000 (6 claims).
+
+Non-fraudulent claims show a more varied distribution, with notable frequencies at 1000, 500, 2000, and 3000.
+
+The presence of only three distinct repair costs for fraudulent claims further supports the idea of a pattern or strategy being employed.
+
+```{r include = FALSE}
+
+claim_fraudflag_data_cleanedpas1 <- 
+    claim_fraudflag_data_cleaned %>% 
+    filter(total_passengers == 1 & fraudFlag == TRUE)
+
+
+plot3 <- claim_fraudflag_data_cleanedpas1 %>% 
+    ggplot(aes(x = repaircost)) +
+    geom_bar(alpha = 1.5, fill = "tomato") +
+    geom_text(stat = 'count', aes(label = ..count..), position = position_dodge(width = 1), vjust = -0.5) +
+    labs(title = "Repaircost Distribution ", x = "Repaircost", y = "Frequency",
+         subtitle = "Total passengers 1 &  fraudFlag is true") +
+    scale_x_continuous(labels = scales::comma, breaks = c(500, 1000, 1500, 2000, 2500, 3000, 3500))
+
+plot3
+```
+
+```{r INCLUDE = FALSE}
+claim_fraudflag_data_cleanedpas1false <- 
+    claim_fraudflag_data_cleaned %>% 
+    filter(total_passengers == 1 & fraudFlag == FALSE)
+
+
+plot4 <- claim_fraudflag_data_cleanedpas1false %>% 
+    ggplot(aes(x = repaircost)) +
+    geom_bar(alpha = 1.5, fill = "orchid") +
+    geom_text(stat = 'count', aes(label = ..count..), position = position_dodge(width = 1), vjust = -0.5) +
+    labs(title = "Repaircost Distribution ", x = "Repaircost", y = "Frequency",
+         subtitle = "Total passengers 1 &  fraudFlag is false") +
+    scale_x_continuous(labels = scales::comma, breaks = c(500, 1000, 1500, 2000, 2500, 3000, 3500))
+
+
+```
+
+```{r include = FALSE}
+claim_fraudflag_data_cleanedpas0 <- 
+    claim_fraudflag_data_cleaned %>% 
+    filter(total_passengers == 0 & fraudFlag == TRUE)
+
+plot5 <- claim_fraudflag_data_cleanedpas0 %>% 
+    ggplot(aes(x = repaircost)) +
+    geom_bar(alpha = 1.5, fill = "tomato") +
+    geom_text(stat = 'count', aes(label = ..count..), position = position_dodge(width = 1), vjust = -0.5) +
+    labs(x = "Repaircost", y = "Frequency",
+         subtitle = "Total passengers 0 & fraudflag is true") +
+    scale_x_continuous(labels = scales::comma, breaks = c(500, 1000, 1500, 2000, 2500, 3000, 3500))
+
+plot5
+```
+
+```{r}
+claim_fraudflag_data_cleanedpas0_false <- 
+    claim_fraudflag_data_cleaned %>% 
+    filter(total_passengers == 0 & fraudFlag == FALSE)
+
+plot6 <- claim_fraudflag_data_cleanedpas0_false %>% 
+    ggplot(aes(x = repaircost)) +
+    geom_bar(alpha = 1.5, fill = "orchid") +
+    geom_text(stat = 'count', aes(label = ..count..), position = position_dodge(width = 1), vjust = -0.5) +
+    labs(x = "Repaircost", y = "Frequency",
+         subtitle = "total passengers 0 &  fraudFlag is FALSE") +
+    scale_x_continuous(labels = scales::comma, breaks = c(500, 1000, 1500, 2000, 2500, 3000, 3500))
+
+
+combined_plot3 <- (plot3 + plot4)/ (plot5 + plot6)
+
+
+combined_plot3
+
+```
+
+Doing the comparison for total_passengers as 1 and 0 across fraudflag true and false we find that
+
+For cases with total passengers 1 and fraud status true, the repair costs are generally lower. The highest frequency of repair costs is observed around 500. In contrast, for non-fraudulent cases with one passenger, the repair costs are higher, with the most frequent repair cost around 1000.
+
+For both fraud and non-fraud cases with zero passengers, the repair cost distribution is similar, with the highest frequencies for lower repair costs (500 and 1000). The number of passengers seems to have a notable impact on repair cost patterns, especially in fraudulent cases.
+
+```{r include = FALSE}
+claim_fraudflag_data_cleanedtrueflag <- 
+    claim_fraudflag_data_cleaned %>% 
+    filter(fraudFlag == TRUE)
+
+```
+
+```{r include = FALSE}
+claim_fraudflag_data_cleanedtrueflag %>% 
+    count(address , total_passengers) %>% 
+    arrange(desc(n)) %>% 
+    head(9)
+
+## here below is the list of addresses with total passengers as 2 and n represent the frequency of time they got repeated when filtered for fraudFlag as true.
+```
+
+![list of addresses with 2 passengers and frequency as 2](R Project/00_data/list.png){#fig-list width="509"}
+
+This is the list of addresses which had total passengers as 2 and the frequency of how many times did they appear in the dataset when filtered for true as fraudflag.
+
+## Engineered Features to improve the model :
+
+```{r include = FALSE}
+rec_obj1 <- recipe(fraudFlag ~ ., claim_fraudflag_data_cleaned) %>% 
+    
+##initialising recipe object for a predictive model where fraudFlag is the target variable, and all other columns in claim_fraudflag_data_cleaned are predictors
+    
+    step_zv(all_predictors()) %>% 
+    #removing all the zero varience features in our predictors
+    
+    step_discretize(age) %>% 
+    #binning the age column in different groups
+    
+    
+    step_interact(terms = ~ age:repaircost) %>% 
+    #specifying the model whethere there are any relationship between age and repaircost.
+    
+    step_interact(terms = ~ total_passengers:repaircost) %>% 
+    
+    prep()
+    
+
+rec_obj1
+
+tidy(rec_obj1)
+#converting it to dataframe a
+tidy(rec_obj1, number = 2)
+#findiing the binnning strategy used
+tidy(rec_obj1, number = 1)
+#finding the zero variance features
+
+claim_fraudflag_data_dummy_binned <- bake(rec_obj1, new_data =claim_fraudflag_data_cleaned)
+#creating a new dataframe with these features.
+
+
+
+view(claim_fraudflag_data_dummy_binned)
+
+```
+
+**Feature engineering** is a crucial step in the data pre-processing stage because it enhances the predictive power of machine learning models by creating new features or modifying existing ones to better capture the underlying patterns in the data. In this process, I am first removing zero variance predictors that do not contribute any meaningful information to the model. Further, discretizing this continuous variable, 'age' into categorical bins. Furthermore, the interaction between 'age' and 'repaircost' was done to know the combined influence of those two features concerning the target feature, fraudFlag as well as the interaction between total_passengers:repaircost. These steps finalize the preparation and application of the recipe to the data to ensure that the dataset is enriched with relevant, well-structured features that will result in better model performance.
+
+## Conclusions from Exploratory Analysis
+
+This analysis of the car insurance claims dataset uncovers several critical insights. After thorough cleaning of the data, performing feature engineering and doing Exploratory Data Analysis the dataset has been transformed into a reliable resource of identifying fraud claim trends and patterns. Some key findings included are as follows.
+
+**Fraudulent Claims** are concentrated over smaller repaircost price especially around 500 and as repaircost increases this trend diminishes. This indicates that claims for higher repaircost may go through with a strict validation process in the insurance company.
+
+On the other Hand non-Fraudulent claims tend to have higher repair cost in general.
+
+**Fraud rate decreases with increasing drivers age** and becomes negligible after the age of 55.Which can be understood as Younger drivers might be less experienced and more prone to risky behaviour increasing both legitimate and Fraudulent claims.
+
+On the other Hand older driver may have many things attached with their behavior like their reputation and many more hence less fraudulent activities are observed.
+
+We can also say that Fraudsters often target less amount to grab less attention on themselves hence are clustered in low repaircost prices.
+
+Fraudulent Claims with two passengers are concentrated at lower price indicating it could be a staged crime and both parties of collusion sticking on small amount for better compensation.(common threshold we can say)
+
+Certain driver-names and Addresses are associated with multiple fraudulent claims and are repeating many times from this the address indicates maybe organized crime hot-spots
+
+Hence the insurance company should
+
+-   Monitor the younger claims application report keenly (below 30) as these group is more likely to be attracted towards Fraudulent tendencies.
+
+-   Flag repeat offenders by tracking addresses and driver names.
+
+-   Introduce some threshold for smaller claims repaircost & claims falling under suspision should be given more attention
+
+-   can also introduce some enhanced varification process for low claim amounts.
+
+-   Should keep an eye on number of passengers as staged accidents could play a vital role in fraudulent claims.
+
+By adopting all these Strategies and keeping all the insights in mind the Insurance company can build a strong and robust fraud detection framework which would minimize the losses and ensure fair treatment to genuine Fraudulent Claims.
